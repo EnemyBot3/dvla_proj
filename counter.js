@@ -1,6 +1,11 @@
 import { MongoClient } from 'mongodb';
 
-const uri = process.env.MONGODB_URI;
+// Paschal2
+// z9fiZDDPjebMQNt
+// mongodb+srv://Paschal2:z9fiZDDPjebMQNt@cluster0.zcp9tl1.mongodb.net/?appName=Cluster0
+
+// const uri = process.env.MONGODB_URI;
+const uri = "mongodb+srv://Paschal2:z9fiZDDPjebMQNt@cluster0.zcp9tl1.mongodb.net/?appName=Cluster0"
 
 // Reuse connection across warm invocations
 let client;
