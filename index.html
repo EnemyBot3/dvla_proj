@@ -1,97 +1,136 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SwapTest — Login</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .auth-wrap { width: 100%; max-width: 420px; padding: 1rem; }
+    .auth-header { text-align: center; margin-bottom: 2rem; }
+    .auth-header p { color: var(--muted); margin-top: 0.4rem; font-size: 0.9rem; }
+    .optional { color: var(--muted); font-size: 0.7rem; margin-left: 0.3rem; text-transform: none; letter-spacing: 0; }
+  </style>
+</head>
 <body>
-  <h2>Driving Test Swap</h2>
+  <div class="auth-wrap">
+    <div class="auth-header">
+      <h1>SWAPTEST</h1>
+      <p>Peer-to-peer UK driving test date swaps</p>
+    </div>
 
-  <div id="toggle">
-    <button onclick="show('register')">Register</button>
-    <button onclick="show('login')">Login</button>
+    <div class="card">
+      <div class="tabs">
+        <div class="tab active" id="tab-login" onclick="show('login')">Login</div>
+        <div class="tab" id="tab-register" onclick="show('register')">Register</div>
+      </div>
+
+      <!-- LOGIN -->
+      <div id="pane-login">
+        <label>Email</label>
+        <input id="l-email" type="email" placeholder="you@example.com"/>
+        <label>Password</label>
+        <input id="l-password" type="password" placeholder="••••••••"/>
+        <button class="btn btn-primary btn-full" onclick="login()">Sign in</button>
+      </div>
+
+      <!-- REGISTER -->
+      <div id="pane-register" style="display:none">
+        <label>Full name</label>
+        <input id="r-name" placeholder="Jane Smith"/>
+        <label>Email</label>
+        <input id="r-email" type="email" placeholder="you@example.com"/>
+        <label>Password</label>
+        <input id="r-password" type="password" placeholder="••••••••"/>
+        <label>Phone <span class="optional">optional — for swap notifications</span></label>
+        <input id="r-phone" type="tel" placeholder="+44 7700 000000"/>
+        <label>DVLA driver number</label>
+        <input id="r-dvla" placeholder="SMITH712085JA9AB"/>
+        <label>Test date</label>
+        <input id="r-testdate" type="date"/>
+        <label>Vehicle type</label>
+        <select id="r-vehicle">
+          <option value="car">Car</option>
+          <option value="motorcycle">Motorcycle</option>
+          <option value="lorry">Lorry</option>
+        </select>
+        <label>Region</label>
+        <select id="r-region">
+          <option value="london">London</option>
+          <option value="south-east">South East</option>
+          <option value="south-west">South West</option>
+          <option value="midlands">Midlands</option>
+          <option value="north-west">North West</option>
+          <option value="north-east">North East</option>
+          <option value="yorkshire">Yorkshire</option>
+          <option value="scotland">Scotland</option>
+          <option value="wales">Wales</option>
+          <option value="northern-ireland">Northern Ireland</option>
+        </select>
+        <button class="btn btn-primary btn-full" onclick="register()">Create account</button>
+      </div>
+
+      <p class="log" id="log"></p>
+    </div>
   </div>
-
-  <div id="register">
-    <h3>Register</h3>
-    <input id="r-name" placeholder="Full name" /><br/>
-    <input id="r-email" placeholder="Email" /><br/>
-    <input id="r-password" type="password" placeholder="Password" /><br/>
-    <input id="r-phone" placeholder="Phone (optional)" /><br/>
-    <input id="r-dvla" placeholder="DVLA number" /><br/>
-    <input id="r-testdate" type="date" /><br/>
-    <select id="r-vehicle">
-      <option value="car">Car</option>
-      <option value="motorcycle">Motorcycle</option>
-      <option value="lorry">Lorry</option>
-    </select><br/>
-    <select id="r-region">
-      <option value="london">London</option>
-      <option value="midlands">Midlands</option>
-      <option value="north">North</option>
-      <option value="scotland">Scotland</option>
-      <option value="wales">Wales</option>
-      <option value="south">South</option>
-    </select><br/>
-    <button onclick="register()">Register</button>
-  </div>
-
-  <div id="login" style="display:none">
-    <h3>Login</h3>
-    <input id="l-email" placeholder="Email" /><br/>
-    <input id="l-password" type="password" placeholder="Password" /><br/>
-    <button onclick="login()">Login</button>
-  </div>
-
-  <p id="log"></p>
 
   <script>
-    function log(msg) {
-      document.getElementById('log').innerText += '\n' + msg;
-    }
+    if (localStorage.getItem('user')) window.location = 'calendar.html';
 
-    function show(page) {
-      document.getElementById('register').style.display = page === 'register' ? 'block' : 'none';
-      document.getElementById('login').style.display    = page === 'login'    ? 'block' : 'none';
-    }
+    function log(msg) { document.getElementById('log').innerText += msg + '\n'; }
 
-    async function register() {
-      const body = {
-        name:        document.getElementById('r-name').value,
-        email:       document.getElementById('r-email').value,
-        password:    document.getElementById('r-password').value,
-        phone:       document.getElementById('r-phone').value,
-        dvlaNumber:  document.getElementById('r-dvla').value,
-        testDate:    document.getElementById('r-testdate').value,
-        vehicleType: document.getElementById('r-vehicle').value,
-        region:      document.getElementById('r-region').value,
-      };
-      log('registering...');
-      const res  = await fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'register', ...body })
-      });
-      const data = await res.json();
-      log(JSON.stringify(data));
-      if (data.user) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-        window.location = 'calendar.html';
-      }
+    function show(tab) {
+      document.getElementById('pane-login').style.display    = tab === 'login'    ? 'block' : 'none';
+      document.getElementById('pane-register').style.display = tab === 'register' ? 'block' : 'none';
+      document.getElementById('tab-login').className    = 'tab' + (tab === 'login'    ? ' active' : '');
+      document.getElementById('tab-register').className = 'tab' + (tab === 'register' ? ' active' : '');
+      document.getElementById('log').innerText = '';
     }
 
     async function login() {
-      const body = {
-        email:    document.getElementById('l-email').value,
-        password: document.getElementById('l-password').value,
-      };
-      log('logging in...');
+      log('signing in...');
       const res  = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'login', ...body })
+        body: JSON.stringify({
+          action:   'login',
+          email:    document.getElementById('l-email').value,
+          password: document.getElementById('l-password').value,
+        })
       });
       const data = await res.json();
-      log(JSON.stringify(data));
       if (data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
         window.location = 'calendar.html';
+      } else {
+        log('error: ' + (data.error || 'unknown'));
+      }
+    }
+
+    async function register() {
+      log('creating account...');
+      const res  = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action:      'register',
+          name:        document.getElementById('r-name').value,
+          email:       document.getElementById('r-email').value,
+          password:    document.getElementById('r-password').value,
+          phone:       document.getElementById('r-phone').value,
+          dvlaNumber:  document.getElementById('r-dvla').value,
+          testDate:    document.getElementById('r-testdate').value,
+          vehicleType: document.getElementById('r-vehicle').value,
+          region:      document.getElementById('r-region').value,
+        })
+      });
+      const data = await res.json();
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location = 'calendar.html';
+      } else {
+        log('error: ' + (data.error || 'unknown'));
       }
     }
   </script>

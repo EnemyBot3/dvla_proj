@@ -1,132 +1,218 @@
 <!DOCTYPE html>
-<html>
-<body>
-  <h2>Test Calendar</h2>
-  <p id="welcome"></p>
-  <button onclick="logout()">Logout</button>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SwapTest — Calendar</title>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+    .cal-nav { display: flex; align-items: center; gap: 1rem; }
+    .cal-nav span { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.05em; min-width: 180px; text-align: center; }
 
-  <div id="nav">
-    <button onclick="prevMonth()">&#8592;</button>
-    <span id="month-label"></span>
-    <button onclick="nextMonth()">&#8594;</button>
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .cal-day-name {
+      text-align: center; font-size: 0.72rem; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em;
+      padding: 0.5rem 0;
+    }
+    .cal-cell {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      min-height: 80px;
+      padding: 0.4rem;
+      font-size: 0.8rem;
+      vertical-align: top;
+    }
+    .cal-cell.empty { background: transparent; border-color: transparent; }
+    .cal-cell .day-num { font-weight: 600; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+    .cal-cell.today { border-color: var(--border); }
+    .cal-cell.today .day-num { color: var(--amber); }
+
+    .test-chip {
+      display: block; padding: 3px 6px; border-radius: 5px;
+      font-size: 0.7rem; font-weight: 600; margin-top: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .chip-you  { background: rgba(245,166,35,0.2); color: var(--amber); }
+    .chip-other {
+      background: rgba(76,175,255,0.1); color: #7ec8f5;
+      cursor: pointer; transition: background 0.15s;
+    }
+    .chip-other:hover { background: rgba(76,175,255,0.25); }
+
+    .legend { display: flex; gap: 1rem; align-items: center; margin-top: 1rem; }
+
+    /* Modal */
+    .modal-bg {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.6); z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    .modal-bg.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 1.75rem; width: 100%; max-width: 380px; }
+    .modal h3 { margin-bottom: 0.25rem; }
+    .modal .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 1.25rem; line-height: 1.6; }
+    .modal-actions { display: flex; gap: 0.75rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">SWAPTEST</span>
+  <div class="nav-links">
+    <a href="calendar.html" class="active">Calendar</a>
+    <a href="messages.html">Messages</a>
+    <a href="#" class="logout" onclick="logout()">Logout</a>
+  </div>
+</nav>
+
+<div class="page-wide">
+  <div class="cal-header">
+    <div>
+      <h2>Test Calendar</h2>
+      <p class="muted" id="user-info"></p>
+    </div>
+    <div class="cal-nav">
+      <button class="btn btn-ghost" onclick="prevMonth()">&#8592;</button>
+      <span id="month-label"></span>
+      <button class="btn btn-ghost" onclick="nextMonth()">&#8594;</button>
+    </div>
   </div>
 
-  <table id="cal" border="1" cellpadding="8">
-    <thead>
-      <tr>
-        <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
-      </tr>
-    </thead>
-    <tbody id="cal-body"></tbody>
-  </table>
+  <div class="cal-grid" id="cal-grid">
+    <div class="cal-day-name">Mon</div>
+    <div class="cal-day-name">Tue</div>
+    <div class="cal-day-name">Wed</div>
+    <div class="cal-day-name">Thu</div>
+    <div class="cal-day-name">Fri</div>
+    <div class="cal-day-name">Sat</div>
+    <div class="cal-day-name">Sun</div>
+  </div>
 
-  <p><b>Legend:</b> [YOU] = your test &nbsp; [OTHER] = someone else's test (click to chat)</p>
-  <p id="log"></p>
+  <div class="legend">
+    <span class="test-chip chip-you" style="position:static">Your test</span>
+    <span class="test-chip chip-other" style="position:static;cursor:default">Someone else's test</span>
+  </div>
 
-  <script>
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (!user) window.location = 'index.html';
+  <p class="log" id="log"></p>
+</div>
 
-    document.getElementById('welcome').innerText = 'Logged in as: ' + user.name + ' | Your test: ' + (user.testDate || 'none');
+<!-- Modal -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="modal-name"></h3>
+    <div class="meta" id="modal-meta"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" id="modal-chat-btn">Message to swap</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
-    function log(msg) {
-      document.getElementById('log').innerText += '\n' + msg;
-    }
+<script>
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (!user) window.location = 'index.html';
+  document.getElementById('user-info').innerText = user.name + ' · Your test: ' + (user.testDate || 'not set') + ' · ' + (user.region || '');
 
-    function logout() {
-      localStorage.removeItem('user');
-      window.location = 'index.html';
-    }
+  function log(msg) { document.getElementById('log').innerText += msg + '\n'; }
+  function logout() { localStorage.removeItem('user'); window.location = 'index.html'; }
 
-    let allUsers = [];
-    let current = new Date();
-    current.setDate(1);
+  let allUsers = [];
+  let current  = new Date();
+  current.setDate(1);
 
-    async function loadTests() {
-      log('loading all tests...');
-      const res  = await fetch('/api/tests');
-      const data = await res.json();
-      log('got ' + data.users.length + ' users');
-      allUsers = data.users;
-      renderCalendar();
-    }
+  async function loadTests() {
+    log('loading tests...');
+    const res  = await fetch('/api/tests');
+    const data = await res.json();
+    allUsers = data.users;
+    log('loaded ' + allUsers.length + ' users');
+    renderCalendar();
+  }
 
-    function renderCalendar() {
-      const year  = current.getFullYear();
-      const month = current.getMonth();
+  function renderCalendar() {
+    const year  = current.getFullYear();
+    const month = current.getMonth();
+    document.getElementById('month-label').innerText =
+      current.toLocaleString('default', { month: 'long' }) + ' ' + year;
 
-      document.getElementById('month-label').innerText =
-        current.toLocaleString('default', { month: 'long' }) + ' ' + year;
-
-      // Build a map of dateString -> list of users with tests on that day
-      const dateMap = {};
-      allUsers.forEach(u => {
-        if (u.testDate) {
-          if (!dateMap[u.testDate]) dateMap[u.testDate] = [];
-          dateMap[u.testDate].push(u);
-        }
-      });
-
-      const tbody = document.getElementById('cal-body');
-      tbody.innerHTML = '';
-
-      // What day of the week does the 1st fall on? (Mon=0)
-      const firstDay = new Date(year, month, 1).getDay();
-      const offset   = (firstDay + 6) % 7; // shift so Mon=0
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-      let day = 1;
-      let started = false;
-
-      for (let row = 0; row < 6; row++) {
-        const tr = document.createElement('tr');
-        for (let col = 0; col < 7; col++) {
-          const td = document.createElement('td');
-          const cellIndex = row * 7 + col;
-
-          if (cellIndex < offset || day > daysInMonth) {
-            td.innerText = '';
-          } else {
-            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-            td.innerText = day;
-
-            const usersOnDay = dateMap[dateStr] || [];
-            usersOnDay.forEach(u => {
-              if (u.email === user.email) {
-                td.innerText += '\n[YOU]';
-                td.style.background = '#cfc';
-              } else {
-                const link = document.createElement('div');
-                link.innerText = '[' + u.name + ']';
-                link.style.cursor = 'pointer';
-                link.style.color  = 'blue';
-                link.onclick = () => {
-                  window.location = 'chat.html?with=' + encodeURIComponent(u.email);
-                };
-                td.appendChild(link);
-              }
-            });
-
-            day++;
-          }
-          tr.appendChild(td);
-        }
-        tbody.appendChild(tr);
-        if (day > daysInMonth) break;
+    // Build date map
+    const dateMap = {};
+    allUsers.forEach(u => {
+      if (u.testDate) {
+        if (!dateMap[u.testDate]) dateMap[u.testDate] = [];
+        dateMap[u.testDate].push(u);
       }
-    }
+    });
 
-    function prevMonth() {
-      current.setMonth(current.getMonth() - 1);
-      renderCalendar();
-    }
+    const grid      = document.getElementById('cal-grid');
+    const dayNames  = grid.querySelectorAll('.cal-day-name');
+    // Remove old cells
+    grid.querySelectorAll('.cal-cell').forEach(el => el.remove());
 
-    function nextMonth() {
-      current.setMonth(current.getMonth() + 1);
-      renderCalendar();
-    }
+    const firstDay    = new Date(year, month, 1).getDay();
+    const offset      = (firstDay + 6) % 7;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayStr    = new Date().toISOString().slice(0, 10);
+    const totalCells  = Math.ceil((offset + daysInMonth) / 7) * 7;
 
-    loadTests();
-  </script>
+    for (let i = 0; i < totalCells; i++) {
+      const cell = document.createElement('div');
+      const day  = i - offset + 1;
+
+      if (i < offset || day > daysInMonth) {
+        cell.className = 'cal-cell empty';
+      } else {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        cell.className = 'cal-cell' + (dateStr === todayStr ? ' today' : '');
+
+        const num = document.createElement('div');
+        num.className = 'day-num';
+        num.innerText = day;
+        cell.appendChild(num);
+
+        (dateMap[dateStr] || []).forEach(u => {
+          const chip = document.createElement('span');
+          chip.className = u.email === user.email ? 'test-chip chip-you' : 'test-chip chip-other';
+          chip.innerText = u.email === user.email ? 'You' : u.name.split(' ')[0];
+          chip.title = u.name;
+          if (u.email !== user.email) {
+            chip.onclick = () => openModal(u);
+          }
+          cell.appendChild(chip);
+        });
+      }
+      grid.appendChild(cell);
+    }
+  }
+
+  function openModal(u) {
+    document.getElementById('modal-name').innerText = u.name;
+    document.getElementById('modal-meta').innerHTML =
+      `Test date: <strong>${u.testDate}</strong><br/>
+       Vehicle: <strong>${u.vehicleType}</strong><br/>
+       Region: <strong>${u.region}</strong>` +
+      (u.phone ? `<br/>Phone: <strong>${u.phone}</strong>` : '');
+    document.getElementById('modal-chat-btn').onclick = () => {
+      window.location = 'chat.html?with=' + encodeURIComponent(u.email);
+    };
+    document.getElementById('modal').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+  }
+
+  document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  function prevMonth() { current.setMonth(current.getMonth() - 1); renderCalendar(); }
+  function nextMonth() { current.setMonth(current.getMonth() + 1); renderCalendar(); }
+
+  loadTests();
+</script>
 </body>
 </html>

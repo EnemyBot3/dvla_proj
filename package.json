@@ -1,6 +1,0 @@
-{
-  "name": "swap-test",
-  "dependencies": {
-    "mongodb": "^6.5.0"
-  }
-}
