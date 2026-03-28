@@ -1,9 +1,44 @@
 <!DOCTYPE html>
 <html>
 <body>
+  <h2>Driving Test Swap</h2>
 
-  <h1 id="count">...</h1>
-  <button onclick="press()">PRESS</button>
+  <div id="toggle">
+    <button onclick="show('register')">Register</button>
+    <button onclick="show('login')">Login</button>
+  </div>
+
+  <div id="register">
+    <h3>Register</h3>
+    <input id="r-name" placeholder="Full name" /><br/>
+    <input id="r-email" placeholder="Email" /><br/>
+    <input id="r-password" type="password" placeholder="Password" /><br/>
+    <input id="r-phone" placeholder="Phone (optional)" /><br/>
+    <input id="r-dvla" placeholder="DVLA number" /><br/>
+    <input id="r-testdate" type="date" /><br/>
+    <select id="r-vehicle">
+      <option value="car">Car</option>
+      <option value="motorcycle">Motorcycle</option>
+      <option value="lorry">Lorry</option>
+    </select><br/>
+    <select id="r-region">
+      <option value="london">London</option>
+      <option value="midlands">Midlands</option>
+      <option value="north">North</option>
+      <option value="scotland">Scotland</option>
+      <option value="wales">Wales</option>
+      <option value="south">South</option>
+    </select><br/>
+    <button onclick="register()">Register</button>
+  </div>
+
+  <div id="login" style="display:none">
+    <h3>Login</h3>
+    <input id="l-email" placeholder="Email" /><br/>
+    <input id="l-password" type="password" placeholder="Password" /><br/>
+    <button onclick="login()">Login</button>
+  </div>
+
   <p id="log"></p>
 
   <script>
@@ -11,26 +46,54 @@
       document.getElementById('log').innerText += '\n' + msg;
     }
 
-    async function fetchCount() {
-      log('fetching count...');
-      const res = await fetch('/api/counter');
-      log('status: ' + res.status);
-      const data = await res.json();
-      log('data: ' + JSON.stringify(data));
-      document.getElementById('count').innerText = data.count;
+    function show(page) {
+      document.getElementById('register').style.display = page === 'register' ? 'block' : 'none';
+      document.getElementById('login').style.display    = page === 'login'    ? 'block' : 'none';
     }
 
-    async function press() {
-      log('posting...');
-      const res = await fetch('/api/counter', { method: 'POST' });
-      log('status: ' + res.status);
+    async function register() {
+      const body = {
+        name:        document.getElementById('r-name').value,
+        email:       document.getElementById('r-email').value,
+        password:    document.getElementById('r-password').value,
+        phone:       document.getElementById('r-phone').value,
+        dvlaNumber:  document.getElementById('r-dvla').value,
+        testDate:    document.getElementById('r-testdate').value,
+        vehicleType: document.getElementById('r-vehicle').value,
+        region:      document.getElementById('r-region').value,
+      };
+      log('registering...');
+      const res  = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'register', ...body })
+      });
       const data = await res.json();
-      log('data: ' + JSON.stringify(data));
-      document.getElementById('count').innerText = data.count;
+      log(JSON.stringify(data));
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location = 'calendar.html';
+      }
     }
 
-    fetchCount();
+    async function login() {
+      const body = {
+        email:    document.getElementById('l-email').value,
+        password: document.getElementById('l-password').value,
+      };
+      log('logging in...');
+      const res  = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'login', ...body })
+      });
+      const data = await res.json();
+      log(JSON.stringify(data));
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+        window.location = 'calendar.html';
+      }
+    }
   </script>
-
 </body>
 </html>

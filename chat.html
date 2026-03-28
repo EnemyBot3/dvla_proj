@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>Chat</h2>
+  <p id="info"></p>
+  <button onclick="window.location='calendar.html'">Back to Calendar</button>
+
+  <div id="messages" style="border:1px solid #ccc; height:300px; overflow-y:scroll; padding:8px; margin:8px 0;"></div>
+
+  <input id="msg-input" placeholder="Type a message..." style="width:70%" />
+  <button onclick="send()">Send</button>
+
+  <p id="log"></p>
+
+  <script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) window.location = 'index.html';
+
+    const params    = new URLSearchParams(window.location.search);
+    const withEmail = params.get('with');
+    if (!withEmail) window.location = 'calendar.html';
+
+    document.getElementById('info').innerText = 'Chatting with: ' + withEmail + ' | You: ' + user.email;
+
+    function log(msg) {
+      document.getElementById('log').innerText += '\n' + msg;
+    }
+
+    async function loadMessages() {
+      const res  = await fetch(`/api/messages?from=${encodeURIComponent(user.email)}&to=${encodeURIComponent(withEmail)}`);
+      const data = await res.json();
+      log('loaded ' + data.messages.length + ' messages');
+
+      const box = document.getElementById('messages');
+      box.innerHTML = '';
+      data.messages.forEach(m => {
+        const p = document.createElement('p');
+        p.innerText = (m.fromEmail === user.email ? 'You' : m.fromEmail) + ': ' + m.text;
+        box.appendChild(p);
+      });
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function send() {
+      const text = document.getElementById('msg-input').value;
+      if (!text) return;
+      log('sending message...');
+      const res  = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromEmail: user.email, toEmail: withEmail, text })
+      });
+      const data = await res.json();
+      log(JSON.stringify(data));
+      document.getElementById('msg-input').value = '';
+      loadMessages();
+    }
+
+    // Poll every 3 seconds
+    loadMessages();
+    setInterval(loadMessages, 3000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>Test Calendar</h2>
+  <p id="welcome"></p>
+  <button onclick="logout()">Logout</button>
+
+  <div id="nav">
+    <button onclick="prevMonth()">&#8592;</button>
+    <span id="month-label"></span>
+    <button onclick="nextMonth()">&#8594;</button>
+  </div>
+
+  <table id="cal" border="1" cellpadding="8">
+    <thead>
+      <tr>
+        <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
+      </tr>
+    </thead>
+    <tbody id="cal-body"></tbody>
+  </table>
+
+  <p><b>Legend:</b> [YOU] = your test &nbsp; [OTHER] = someone else's test (click to chat)</p>
+  <p id="log"></p>
+
+  <script>
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user) window.location = 'index.html';
+
+    document.getElementById('welcome').innerText = 'Logged in as: ' + user.name + ' | Your test: ' + (user.testDate || 'none');
+
+    function log(msg) {
+      document.getElementById('log').innerText += '\n' + msg;
+    }
+
+    function logout() {
+      localStorage.removeItem('user');
+      window.location = 'index.html';
+    }
+
+    let allUsers = [];
+    let current = new Date();
+    current.setDate(1);
+
+    async function loadTests() {
+      log('loading all tests...');
+      const res  = await fetch('/api/tests');
+      const data = await res.json();
+      log('got ' + data.users.length + ' users');
+      allUsers = data.users;
+      renderCalendar();
+    }
+
+    function renderCalendar() {
+      const year  = current.getFullYear();
+      const month = current.getMonth();
+
+      document.getElementById('month-label').innerText =
+        current.toLocaleString('default', { month: 'long' }) + ' ' + year;
+
+      // Build a map of dateString -> list of users with tests on that day
+      const dateMap = {};
+      allUsers.forEach(u => {
+        if (u.testDate) {
+          if (!dateMap[u.testDate]) dateMap[u.testDate] = [];
+          dateMap[u.testDate].push(u);
+        }
+      });
+
+      const tbody = document.getElementById('cal-body');
+      tbody.innerHTML = '';
+
+      // What day of the week does the 1st fall on? (Mon=0)
+      const firstDay = new Date(year, month, 1).getDay();
+      const offset   = (firstDay + 6) % 7; // shift so Mon=0
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+      let day = 1;
+      let started = false;
+
+      for (let row = 0; row < 6; row++) {
+        const tr = document.createElement('tr');
+        for (let col = 0; col < 7; col++) {
+          const td = document.createElement('td');
+          const cellIndex = row * 7 + col;
+
+          if (cellIndex < offset || day > daysInMonth) {
+            td.innerText = '';
+          } else {
+            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+            td.innerText = day;
+
+            const usersOnDay = dateMap[dateStr] || [];
+            usersOnDay.forEach(u => {
+              if (u.email === user.email) {
+                td.innerText += '\n[YOU]';
+                td.style.background = '#cfc';
+              } else {
+                const link = document.createElement('div');
+                link.innerText = '[' + u.name + ']';
+                link.style.cursor = 'pointer';
+                link.style.color  = 'blue';
+                link.onclick = () => {
+                  window.location = 'chat.html?with=' + encodeURIComponent(u.email);
+                };
+                td.appendChild(link);
+              }
+            });
+
+            day++;
+          }
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+        if (day > daysInMonth) break;
+      }
+    }
+
+    function prevMonth() {
+      current.setMonth(current.getMonth() - 1);
+      renderCalendar();
+    }
+
+    function nextMonth() {
+      current.setMonth(current.getMonth() + 1);
+      renderCalendar();
+    }
+
+    loadTests();
+  </script>
+</body>
+</html>
