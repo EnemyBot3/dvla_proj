@@ -1,6 +1,5 @@
 {
-  "name": "db-clicker",
-  "version": "1.0.0",
+  "name": "fresh-clicker",
   "dependencies": {
     "mongodb": "^6.5.0"
   }
